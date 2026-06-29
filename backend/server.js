@@ -1,55 +1,72 @@
 const express = require("express");
 const cors = require("cors");
-const mongoose = require("mongoose");
+require("dotenv").config();
 
-// IMPORT MODEL (IMPORTANT)
+const connectDB = require("./config/db");
 const Product = require("./models/Product");
 
 const app = express();
 
-app.use(cors());
+/* ================= MIDDLEWARE ================= */
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-/* ========================
-   TEST ROUTE
-======================== */
+/* ================= DB CONNECTION ================= */
+connectDB();
+
+/* ================= TEST ROUTE ================= */
 app.get("/", (req, res) => {
-    res.send("Backend is running successfully 🚀");
+    res.send("Backend Running 🚀");
 });
 
-/* ========================
-   UPDATE PRODUCT
-======================== */
+/* ================= GET ALL ITEMS ================= */
+app.get("/api/items", async (req, res) => {
+    const items = await Product.find();
+    res.json(items);
+});
+
+/* ================= ADD ITEM ================= */
+app.post("/api/items", async (req, res) => {
+    const { name, quantity, price } = req.body;
+
+    const newItem = new Product({
+        name,
+        quantity,
+        price,
+        total: quantity * price
+    });
+
+    await newItem.save();
+    res.json({ message: "Item added successfully" });
+});
+
+/* ================= UPDATE ITEM ================= */
 app.put("/api/items/:id", async (req, res) => {
-    try {
-        const { name, quantity, price } = req.body;
+    const { name, quantity, price } = req.body;
 
-        const updated = await Product.findByIdAndUpdate(
-            req.params.id,
-            {
-                name,
-                quantity,
-                price,
-                total: quantity * price
-            },
-            { new: true }
-        );
+    const updated = await Product.findByIdAndUpdate(
+        req.params.id,
+        {
+            name,
+            quantity,
+            price,
+            total: quantity * price
+        },
+        { new: true }
+    );
 
-        res.json({
-            message: "Product updated successfully",
-            item: updated
-        });
-
-    } catch (error) {
-        res.status(500).json({ error: "Update failed" });
-    }
+    res.json({ message: "Updated successfully", item: updated });
 });
 
-/* ========================
-   START SERVER
-======================== */
+/* ================= DELETE ITEM ================= */
+app.delete("/api/items/:id", async (req, res) => {
+    await Product.findByIdAndDelete(req.params.id);
+    res.json({ message: "Deleted successfully" });
+});
+
+/* ================= START SERVER ================= */
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on ${PORT}`);
 });
